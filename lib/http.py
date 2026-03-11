@@ -39,21 +39,20 @@ class Protocol(asyncio.subprocess.SubprocessStreamProtocol):
     def process_exited(self):
         super().process_exited()
         logging.info('script exited')
-        print(self._out)
-        print(self._err)
 
 
 async def run(request: web.Request) -> web.Response:
     data = await request.json()
     script = data['script']
+    timeout = data['timeout']
     body = data['body']
     logging.info(f'script `{script}`')
 
     _, ext = os.path.splitext(script)
     if ext == '.py':
-        cmd = f'python -c "{body}"'
+        cmd = 'python'
     elif ext == '.sh':
-        cmd = f'/bin/sh -c "{body}'
+        cmd = 'bash'
     elif ext == '.ps1':
         # TODO
         cmd = ''
@@ -74,8 +73,23 @@ async def run(request: web.Request) -> web.Response:
         stderr=asyncio.subprocess.PIPE,
     )
 
-    asyncio.subprocess.Process(transport, protocol, loop)
+    process = asyncio.subprocess.Process(transport, protocol, loop)
 
+    process.stdin.write(body.encode())
+    process.stdin.write_eof()
+    await process.stdin.drain()
+
+    # TODO OR
+    # await process.communicate(body.encode())
+
+    # try:
+    #     await asyncio.wait_for(process.wait(), timeout=timeout)
+    # except asyncio.TimeoutError:
+    #     logging.warning(f'script `{script}` timed out after {timeout} seconds')
+    #     return web.json_response({'error': 'Script Execution timeout'})
+    # if process.returncode:
+    #     return web.json_response({'error': 'Script Execution failed'})
+    # return web.json_response({'error': None})
     return web.Response(status=204)
 
 
