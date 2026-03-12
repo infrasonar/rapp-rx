@@ -17,24 +17,23 @@ class Protocol(asyncio.subprocess.SubprocessStreamProtocol):
 
     def pipe_data_received(self, fd, data):
         super().pipe_data_received(fd, data)
-        logging.debug(data)
 
-        if fd == 1:
+        line = ''
+        if fd in (1, 2):
             try:
-                self._out.append(data.decode().rstrip())
+                line = data.decode().rstrip()
             except UnicodeDecodeError:
                 try:
-                    self._out.append(data.decode('latin-1').rstrip())
+                    line = data.decode('latin-1').rstrip()
                 except Exception:
                     pass
-        elif fd == 2:
-            try:
-                self._err.append(data.decode().rstrip())
-            except UnicodeDecodeError:
-                try:
-                    self._err.append(data.decode('latin-1').rstrip())
-                except Exception:
-                    pass
+            if line:
+                if fd == 1:
+                    self._out.append(line)
+                    logging.debug(line)
+                elif fd == 2:
+                    self._err.append(line)
+                    logging.error(line)
 
     def process_exited(self):
         super().process_exited()
@@ -79,18 +78,18 @@ async def run(request: web.Request) -> web.Response:
     process.stdin.write_eof()
     await process.stdin.drain()
 
-    # TODO OR
+    # TODO OR send the result.stdout back?
     # await process.communicate(body.encode())
 
-    # try:
-    #     await asyncio.wait_for(process.wait(), timeout=timeout)
-    # except asyncio.TimeoutError:
-    #     logging.warning(f'script `{script}` timed out after {timeout} seconds')
-    #     return web.json_response({'error': 'Script Execution timeout'})
-    # if process.returncode:
-    #     return web.json_response({'error': 'Script Execution failed'})
-    # return web.json_response({'error': None})
-    return web.Response(status=204)
+    try:
+        await asyncio.wait_for(process.wait(), timeout=timeout)
+    except asyncio.TimeoutError:
+        logging.warning(f'script `{script}` timed out after {timeout} seconds')
+        return web.json_response({'error': 'Script Execution timeout'})
+    if process.returncode:
+        nr = process.returncode
+        return web.json_response({'error': f'Script Execution failed ({nr})'})
+    return web.json_response({'error': None})
 
 
 async def init_http_server() -> web.AppRunner:
