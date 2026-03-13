@@ -9,11 +9,6 @@ _HTTP_PORT = int(os.getenv('HTTP_PORT', 80))
 
 
 class Protocol(asyncio.subprocess.SubprocessStreamProtocol):
-    def __init__(self, name, limit, loop):
-        super().__init__(limit=limit, loop=loop)
-        self.name = name
-        self._out = []
-        self._err = []
 
     def pipe_data_received(self, fd, data):
         super().pipe_data_received(fd, data)
@@ -29,15 +24,9 @@ class Protocol(asyncio.subprocess.SubprocessStreamProtocol):
                     pass
             if line:
                 if fd == 1:
-                    self._out.append(line)
                     logging.debug(line)
                 elif fd == 2:
-                    self._err.append(line)
                     logging.error(line)
-
-    def process_exited(self):
-        super().process_exited()
-        logging.info('script exited')
 
 
 async def run(request: web.Request) -> web.Response:
@@ -63,10 +52,8 @@ async def run(request: web.Request) -> web.Response:
     env.update(data['env'])
 
     transport, protocol = await loop.subprocess_shell(
-        lambda: Protocol(script, 2**16, loop),
+        lambda: Protocol(2**16, loop),
         cmd=cmd,
-        # cwd=cwd,
-        # executable='',
         env=env,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -78,17 +65,23 @@ async def run(request: web.Request) -> web.Response:
     process.stdin.write_eof()
     await process.stdin.drain()
 
-    # TODO OR send the result.stdout back?
-    # await process.communicate(body.encode())
-
     try:
         await asyncio.wait_for(process.wait(), timeout=timeout)
     except asyncio.TimeoutError:
+        try:
+            process.kill()
+            # below is a fix for Python 3.12 (for some reason close is not
+            # reached on the transport after calling kill or terminate)
+            transport.close()
+        except Exception:
+            pass
         logging.warning(f'script `{script}` timed out after {timeout} seconds')
         return web.json_response({'error': 'Script Execution timeout'})
     if process.returncode:
         nr = process.returncode
+        logging.warning(f'script `{script}` failed ({nr})')
         return web.json_response({'error': f'Script Execution failed ({nr})'})
+    logging.debug(f'script `{script}` done')
     return web.json_response({'error': None})
 
 
