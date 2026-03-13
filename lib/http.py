@@ -3,30 +3,10 @@ import logging
 import os
 from aiohttp import web
 from .loop import loop
+from .protocol import Protocol
 
 
 _HTTP_PORT = int(os.getenv('HTTP_PORT', 80))
-
-
-class Protocol(asyncio.subprocess.SubprocessStreamProtocol):
-
-    def pipe_data_received(self, fd, data):
-        super().pipe_data_received(fd, data)
-
-        line = ''
-        if fd in (1, 2):
-            try:
-                line = data.decode().rstrip()
-            except UnicodeDecodeError:
-                try:
-                    line = data.decode('latin-1').rstrip()
-                except Exception:
-                    pass
-            if line:
-                if fd == 1:
-                    logging.debug(line)
-                elif fd == 2:
-                    logging.error(line)
 
 
 async def run(request: web.Request) -> web.Response:
@@ -90,6 +70,10 @@ async def init_http_server() -> web.AppRunner:
     app.add_routes([
         web.post('/run', run),
     ])
+
+    # TODO less aiohttp.access logging?
+    # logger = logging.getLogger('aiohttp.access')
+    # logger.setLevel(logging.WARNING)
 
     logging.info(f"Listening to HTTP requests on port {_HTTP_PORT}")
     runner = web.AppRunner(app)
