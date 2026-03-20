@@ -6,7 +6,8 @@ from .loop import loop
 from .protocol import Protocol
 
 
-_HTTP_PORT = int(os.getenv('HTTP_PORT', 80))
+_HTTP_PORT = int(os.getenv('HTTP_PORT', 6214))
+_WINRMX= os.getenv('WINRM', '/code/winrmx.py')
 
 
 async def run(request: web.Request) -> web.Response:
@@ -17,24 +18,21 @@ async def run(request: web.Request) -> web.Response:
     logging.info(f'script `{script}`')
 
     _, ext = os.path.splitext(script)
-    if ext == '.py':
+    ext_lcase = ext.lower()
+    if ext_lcase == '.py':
         cmd = 'python'
-    elif ext == '.sh':
+    elif ext_lcase == '.sh':
         cmd = 'bash'
-    elif ext == '.ps1':
-        # TODO
-        cmd = ''
+    elif ext_lcase == '.ps1':
+        cmd = _WINRMX
     else:
         msg = f'unsupported ext: `{ext}`'
         return web.Response(status=400, text=msg)
 
-    env = os.environ.copy()
-    env.update(data['env'])
-
     transport, protocol = await loop.subprocess_shell(
         lambda: Protocol(2**16, loop),
         cmd=cmd,
-        env=env,
+        env=data['env'],
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
