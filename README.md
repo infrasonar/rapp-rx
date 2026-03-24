@@ -1,3 +1,6 @@
+[![CI](https://github.com/infrasonar/rapp-rx/workflows/CI/badge.svg)](https://github.com/infrasonar/rapp-rx/actions)
+[![Release Version](https://img.shields.io/github/release/infrasonar/rapp-rx)](https://github.com/infrasonar/rapp-rx/releases)
+
 # Remote Script Execution (via Rapp)
 
 ## Environment variable
