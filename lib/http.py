@@ -7,7 +7,7 @@ from .protocol import Protocol
 
 
 _HTTP_PORT = int(os.getenv('HTTP_PORT', 6214))
-_WINRMX= os.getenv('WINRM', '/code/winrmx.py')
+_WINRMX = os.getenv('WINRM', '/code/winrmx.py')
 
 
 async def run(request: web.Request) -> web.Response:
@@ -38,7 +38,7 @@ async def run(request: web.Request) -> web.Response:
     )
 
     process = asyncio.subprocess.Process(transport, protocol, loop)
-
+    assert process.stdin
     process.stdin.write(body.encode())
     process.stdin.write_eof()
     await process.stdin.drain()
@@ -69,7 +69,7 @@ async def init_http_server() -> web.AppRunner:
         web.post('/run', run),
     ])
 
-    # TODO less aiohttp.access logging?
+    # less aiohttp.access logging:
     # logger = logging.getLogger('aiohttp.access')
     # logger.setLevel(logging.WARNING)
 
