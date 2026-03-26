@@ -12,3 +12,5 @@ Variable            | Default                       | Description
 `LOG_FMT`           | `%y%m%d %H:%M:%S`             | Log format prefix.
 `HTTP_PORT`         | `6214`                        | RX port
 `WINRMX`            | `/code/winrmx.py`             | Script for WinRM (`.ps1`) execution.
+`PYTHON`            | `/usr/local/bin/python`       | Python binary.
+`BASH`              | `/usr/bin/bash`               | Bash binary.

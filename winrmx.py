@@ -264,8 +264,7 @@ def from_env(inp: str) -> str:
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print('Expecting a single argument.\n'
-              'For example: \n'
-              '  winrm.py my-script.ps1', file=sys.stderr)
+              'For example: winrmx.py my-script.ps1', file=sys.stderr)
         sys.exit(ERR_NUM_ARGS)
 
     script_name = sys.argv[1]
@@ -287,8 +286,8 @@ if __name__ == '__main__':
     if m is None:
         print(
             "RX PowerShell script must start with a valid connection string.\n"
-            "For example:\n"
-            "# winrm://alice:{PASSWORD}@{ASSET_NAME}", file=sys.stderr)
+            "For example: # winrm://alice:{PASSWORD}@{ASSET_NAME}",
+            file=sys.stderr)
         sys.exit(ERR_INVALID_OR_MISSING_CONNECTION_STR)
 
     username = from_env(m.group(1).strip())
@@ -300,7 +299,7 @@ if __name__ == '__main__':
         assert 1 <= port < 2**16
     except Exception:
         print(
-            'Port must be a number between 1 and 65535.\n'
+            'Port must be a number between 1 and 65535. '
             'Default is 5986 (HTTPS), use 5985 for HTTP.).\n'
             f'Got: {port_str}', file=sys.stderr)
         sys.exit(ERR_INVALID_PORT_NUMBER)

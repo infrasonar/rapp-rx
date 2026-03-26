@@ -8,6 +8,8 @@ from .protocol import Protocol
 
 _HTTP_PORT = int(os.getenv('HTTP_PORT', 6214))
 _WINRMX = os.getenv('WINRM', '/code/winrmx.py')
+_PYTHON = os.getenv('PYTHON', '/usr/local/bin/python')
+_BASH = os.getenv('BASH', '/usr/bin/bash')
 
 
 async def run(request: web.Request) -> web.Response:
@@ -20,18 +22,18 @@ async def run(request: web.Request) -> web.Response:
     _, ext = os.path.splitext(script)
     ext_lcase = ext.lower()
     if ext_lcase == '.py':
-        cmd = 'python'
+        cmd = _PYTHON
     elif ext_lcase == '.sh':
-        cmd = 'bash'
+        cmd = _BASH
     elif ext_lcase == '.ps1':
-        cmd = _WINRMX
+        cmd = f'{_PYTHON} {_WINRMX}'
     else:
         msg = f'unsupported ext: `{ext}`'
         return web.Response(status=400, text=msg)
 
     transport, protocol = await loop.subprocess_shell(
         lambda: Protocol(2**16, loop),
-        cmd=cmd,
+        cmd=f'{cmd} "{script}"',
         env=data['env'],
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
