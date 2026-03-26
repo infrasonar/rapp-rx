@@ -13,19 +13,13 @@ _PYTHON = os.getenv('PYTHON', '/usr/local/bin/python')
 _BASH = os.getenv('BASH', '/usr/bin/bash')
 
 
-async def wait(start: float):
-    duration = time.time() - start
-    if duration < 1.0:
-        await asyncio.sleep(1.0 - duration)
-
-
 async def on_run(request: web.Request) -> web.Response:
     start = time.time()
     data = await request.json()
     script = data['script']
     timeout = data['timeout']
     body = data['body']
-    logging.info(f'script `{script}`')
+    logging.info(f'execute script `{script}`')
 
     _, ext = os.path.splitext(script)
     ext_lcase = ext.lower()
@@ -37,7 +31,6 @@ async def on_run(request: web.Request) -> web.Response:
         cmd = f'{_PYTHON} {_WINRMX}'
     else:
         msg = f'unsupported ext: `{ext}`'
-        await wait(start)
         return web.Response(status=400, text=msg)
 
     transport, protocol = await loop.subprocess_shell(
@@ -65,10 +58,8 @@ async def on_run(request: web.Request) -> web.Response:
         except Exception:
             pass
         logging.warning(f'script `{script}` timed out after {timeout} seconds')
-        await wait(start)
         return web.json_response({'error': 'Script Execution timeout'})
 
-    await wait(start)
     if process.returncode:
         nr = process.returncode
         logging.warning(f'script `{script}` failed ({nr})')
