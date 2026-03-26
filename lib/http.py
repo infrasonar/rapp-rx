@@ -67,13 +67,14 @@ async def on_run(request: web.Request) -> web.Response:
         logging.warning(f'script `{script}` timed out after {timeout} seconds')
         await wait(start)
         return web.json_response({'error': 'Script Execution timeout'})
+
+    await wait(start)
     if process.returncode:
         nr = process.returncode
         logging.warning(f'script `{script}` failed ({nr})')
-        await wait(start)
         return web.json_response({'error': f'Script Execution failed ({nr})'})
-    logging.debug(f'script `{script}` done')
-    await wait(start)
+
+    logging.info(f'script `{script}` success')
     return web.json_response({'error': None})
 
 
