@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from aiohttp import web
 from .loop import loop
 from .protocol import Protocol
@@ -12,7 +13,14 @@ _PYTHON = os.getenv('PYTHON', '/usr/local/bin/python')
 _BASH = os.getenv('BASH', '/usr/bin/bash')
 
 
-async def run(request: web.Request) -> web.Response:
+async def wait(start: float):
+    duration = time.time() - start
+    if duration < 1.0:
+        await asyncio.sleep(1.0 - duration)
+
+
+async def on_run(request: web.Request) -> web.Response:
+    start = time.time()
     data = await request.json()
     script = data['script']
     timeout = data['timeout']
@@ -29,11 +37,12 @@ async def run(request: web.Request) -> web.Response:
         cmd = f'{_PYTHON} {_WINRMX}'
     else:
         msg = f'unsupported ext: `{ext}`'
+        await wait(start)
         return web.Response(status=400, text=msg)
 
     transport, protocol = await loop.subprocess_shell(
         lambda: Protocol(2**16, loop),
-        cmd=f'{cmd} "{script}"',
+        cmd=cmd,
         env=data['env'],
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -56,19 +65,22 @@ async def run(request: web.Request) -> web.Response:
         except Exception:
             pass
         logging.warning(f'script `{script}` timed out after {timeout} seconds')
+        await wait(start)
         return web.json_response({'error': 'Script Execution timeout'})
     if process.returncode:
         nr = process.returncode
         logging.warning(f'script `{script}` failed ({nr})')
+        await wait(start)
         return web.json_response({'error': f'Script Execution failed ({nr})'})
     logging.debug(f'script `{script}` done')
+    await wait(start)
     return web.json_response({'error': None})
 
 
 async def init_http_server() -> web.AppRunner:
     app = web.Application()
     app.add_routes([
-        web.post('/run', run),
+        web.post('/run', on_run),
     ])
 
     # less aiohttp.access logging:

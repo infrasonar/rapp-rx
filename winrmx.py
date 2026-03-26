@@ -22,6 +22,7 @@ ERR_INVALID_OR_MISSING_CONNECTION_STR = 103
 ERR_MISSING_ENV_VAR = 104
 ERR_INVALID_PORT_NUMBER = 105
 ERR_FAILED_TO_EXEC = 106
+ERR_FAILED_READING_STDIN = 107
 
 # Ignore common env vars
 IGNORE_ENV = set((
@@ -262,25 +263,32 @@ def from_env(inp: str) -> str:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 1:
+        try:
+            conn_str = sys.stdin.readline()
+            ps_script = sys.stdin.read()
+        except Exception:
+            print('Failed to read from stdin', file=sys.stderr)
+            sys.exit(ERR_FAILED_READING_STDIN)
+    elif len(sys.argv) > 2:
+        script_name = sys.argv[1]
+        _, ext = os.path.splitext(script_name)
+        if ext.lower() != '.ps1':
+            print('Expecting a PowerShell script (.ps1). \n'
+                  f'Got: {ext or "unknown script type"}', file=sys.stderr)
+            sys.exit(ERR_NO_PS1_SCRIPT)
+        try:
+            with open(script_name, 'r') as f:
+                conn_str = f.readline()
+                ps_script = f.read()
+        except Exception:
+            print(f"Failed to read file: {script_name}", file=sys.stderr)
+            sys.exit(ERR_READING_FILE)
+
+    else:
         print('Expecting a single argument.\n'
               'For example: winrmx.py my-script.ps1', file=sys.stderr)
         sys.exit(ERR_NUM_ARGS)
-
-    script_name = sys.argv[1]
-    _, ext = os.path.splitext(script_name)
-    if ext.lower() != '.ps1':
-        print('Expecting a PowerShell script (.ps1). \n'
-              f'Got: {ext or "unknown script type"}', file=sys.stderr)
-        sys.exit(ERR_NO_PS1_SCRIPT)
-
-    try:
-        with open(script_name, 'r') as f:
-            conn_str = f.readline()
-            ps_script = f.read()
-    except Exception:
-        print(f"Failed to read file: {script_name}", file=sys.stderr)
-        sys.exit(ERR_READING_FILE)
 
     m = _RE_CONN.match(conn_str)
     if m is None:
