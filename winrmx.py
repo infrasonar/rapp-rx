@@ -110,7 +110,7 @@ _RE_CONN = re.compile(
     r'(:(\{[A-Z_]+\}|\d{1,5}))?$')
 
 # Regular expression for env
-_RE_ENV = re.compile(r'$\{[A-Z_]+\}$')
+_RE_ENV = re.compile(r'^\{([A-Z_]+)\}$')
 
 
 class Session:
@@ -270,7 +270,7 @@ if __name__ == '__main__':
         except Exception:
             print('Failed to read from stdin', file=sys.stderr)
             sys.exit(ERR_FAILED_READING_STDIN)
-    elif len(sys.argv) > 2:
+    elif len(sys.argv) == 2:
         script_name = sys.argv[1]
         _, ext = os.path.splitext(script_name)
         if ext.lower() != '.ps1':
